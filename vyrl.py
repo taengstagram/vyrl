@@ -29,7 +29,7 @@ Utdykrum26hyHP8nip3066YHPFHdeVrY22hCEQjyZF9Rs9sApvq51zkkxJtpCZgB
 Giwj9BPuUtmkgn3+2H59ASIykVVkdNa9vZbfOQOsmg04EbQctOlcso2lImBsWFyO
 DwIDAQAB
 -----END PUBLIC KEY-----"""
-HORIZONTAL_LINE = '------------------------------------------------------------------------'
+
 BASE_URL = 'http://api.vyrl.com:8082/ko/'
 HEADERS = {'User-Agent': 'Dalvik/1.6.0 (Linux; U; Android 4.2.2)'}
 RANDOM_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -71,6 +71,7 @@ SHORTCUT_ACCOUNTS = [
     {'user_id': 54780, 'nickname': 'RedVelvet_CN'},
     {'user_id': 54781, 'nickname': 'RedVelvet_EN'}]
 
+HORIZONTAL_LINE = '------------------------------------------------------------------------'
 TEMP_FOLDER = 'vyrl_temp'
 INTRO = """
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -88,14 +89,14 @@ PAGE_TEMPLATE = """
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/bootstrap/3.3.5/css/bootstrap.min.css">
-<style>img { max-width: 100%% } body { padding-top: 2em; }</style>
+<style>img { max-width: 100%% } body { padding-top: 2em; font-family: sans-serif; }</style>
 </head>
 <body><div class=container><div class=col-md-8>
 %(content)s
 </div></div>
 </body></html>
 """
-PER_PAGE = 20   # doesn't seem to be followed
+PER_PAGE = 20   # doesn't seem to be followed, fixed at 20 on server side?
 
 
 class bcolors:
@@ -134,7 +135,6 @@ class Vyrl(cmd.Cmd):
     def _clean_html(content):
         content = re.sub(r'\sstyle="[^"]+"', '', content)
         content = re.sub(r'<a[^<>]*\shref="javascript[^"]+"[^<>]*>([^<>]+)</a>', '\g<1>', content)
-        #content = re.sub(r'</head>', '<style>body{font-family: sans-serif;} img{width: 100%;}</style></head>', content)
         content = re.sub(r'<html[^<>]*>.+<body[^<>]*>(.+)</body></html>', '\g<1>', content,
                          flags=re.MULTILINE|re.DOTALL)
         content = re.sub(r'(</?span>)', '', content)
@@ -274,8 +274,8 @@ class Vyrl(cmd.Cmd):
                 return
 
             dt = datetime.datetime.strptime(post.get('created_at'), "%Y-%m-%dT%H:%M:%S+0900")
+            # strip html to make it marginally readable in console
             content = re.sub('<[^<]+?>', '', post.get('content'))
-            #content = post.get('content')
             user_id = post.get('user', {}).get('user_id')
             nickname = post.get('user', {}).get('nickname')
 
@@ -302,7 +302,7 @@ class Vyrl(cmd.Cmd):
 
     def do_open(self, params):
         """Open post [post_id]
-        Opens the post with the in the browser.
+        Opens the post in default browser.
         Example:
             open 567a72024624733a048b4589"""
 
@@ -323,7 +323,7 @@ class Vyrl(cmd.Cmd):
                 print 'Unable to retrieve post: %s' % selected_post_id
                 return
 
-            if post.get('post_type') == 3:
+            if post.get('post_type') == 3:  # "Magazine" type post
                 contents = self._clean_html(post.get('content'))
             else:
                 contents = '<p>%(content)s</p><img src="%(img)s">' % {
@@ -355,4 +355,4 @@ if __name__ == '__main__':
         sys.exit(0)
     except Exception as e:
         Vyrl.cleanup()
-        print 'Unexpected error:', bcolors.FAIL + str(e) + bcolors.ENDC
+        print 'Unexpected error:', self._color_term(str(e), bcolors.FAIL)
