@@ -89,13 +89,14 @@ PAGE_TEMPLATE = """
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/bootstrap/3.3.5/css/bootstrap.min.css">
-<style>img { max-width: 100%% } body { padding-top: 2em; font-family: sans-serif; }</style>
+<style>img { max-width: 100%% } body { padding-top: 2em; }</style>
 </head>
 <body><div class=container><div class=col-md-8>
 %(content)s
 </div></div>
 </body></html>
 """
+MAGAZINE_POST_TYPE = 3
 PER_PAGE = 20   # doesn't seem to be followed, fixed at 20 on server side?
 
 
@@ -185,7 +186,7 @@ class Vyrl(cmd.Cmd):
         print 'Initialising. Please wait...'
         r = self._call_api(
             'statuses/popular',
-            {'user_id': '54844', 'page': 1, 'limit': 20, 'my_user_id': '1'})
+            {'user_id': '54844', 'page': 1, 'limit': PER_PAGE, 'my_user_id': '1'})
         users = r.get('result_set', {}).get('users')
         self.users.extend([{'user_id': u['user_id'], 'nickname': u['nickname']} for u in users])
         if not os.path.exists(TEMP_FOLDER):
@@ -208,7 +209,7 @@ class Vyrl(cmd.Cmd):
 
     def do_user(self, params):
         """View account [user_id]
-        Displays the 10 latest posts from the user_id given.
+        Displays the 20 latest posts from the user_id given.
         Example:
             user 54807"""
         args = params.split(' ')
@@ -235,7 +236,7 @@ class Vyrl(cmd.Cmd):
                 dt = datetime.datetime.strptime(p.get('created_at'), "%Y-%m-%dT%H:%M:%S+0900")
                 print '\n', 'PostID:', bcolors.HEADER + p['post_id'] + bcolors.ENDC, '\t\t', dt
                 print HORIZONTAL_LINE
-                if p['post_type'] == 3:
+                if p['post_type'] == MAGAZINE_POST_TYPE:
                     print p['title']
                 else:
                     print p['content']
@@ -295,7 +296,7 @@ class Vyrl(cmd.Cmd):
                 for m in post.get('medias', []):
                     print self._color_term('  * ' + m.get('image', {}).get('url'), bcolors.OKGREEN)
 
-            if post.get('post_type') == 3:
+            if post.get('post_type') == MAGAZINE_POST_TYPE:
                 print 'To view this post in the browser, enter "open %s"' % selected_post_id
         except urllib2.HTTPError as http_ex:
             print 'Error retrieving post: %s' % self._color_term(str(http_ex), bcolors.WARNING)
@@ -323,7 +324,8 @@ class Vyrl(cmd.Cmd):
                 print 'Unable to retrieve post: %s' % selected_post_id
                 return
 
-            if post.get('post_type') == 3:  # "Magazine" type post
+            if post.get('post_type') == MAGAZINE_POST_TYPE:
+                # Strip superfluous tags for "Magazine" type post
                 contents = self._clean_html(post.get('content'))
             else:
                 contents = '<p>%(content)s</p><img src="%(img)s">' % {
